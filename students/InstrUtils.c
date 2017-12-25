@@ -67,6 +67,8 @@ void PrintInstruction(FILE * outfile, Instruction * instr)
 	}
 }
 
+
+//COMPLETED!
 void PrintInstructionList(FILE * outfile, Instruction * instr)
 {
 	if (!outfile) {
@@ -79,6 +81,11 @@ void PrintInstructionList(FILE * outfile, Instruction * instr)
 	}
 
 	/* YOUR CODE GOES HERE */
+	while(instr){
+		PrintInstruction(outfile, instr);
+		instr = instr->next;
+	}
+	
 
 }
 

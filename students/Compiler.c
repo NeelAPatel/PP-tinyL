@@ -5,26 +5,33 @@
  *  Author: Uli                              *
  *  Student Version                          *
  *********************************************
+ //TODO: Add appropriate Error statements
+			//FIXME:
+			//NOTE:
+			//HACK:
+			//WORKS:
+
  */
 
 /* -------------------------------------------------
 
             CFG for tinyL LANGUAGE
 
-     PROGRAM ::= STMTLIST .
-     STMTLIST ::= STMT MORESTMTS
+     PROGRAM   ::= STMTLIST .
+     STMTLIST  ::= STMT MORESTMTS
      MORESTMTS ::= ; STMTLIST | epsilon
-     STMT ::= ASSIGN | PRINT
-     ASSIGN ::= VARIABLE = EXPR
-     PRINT ::= ! VARIABLE
-     EXPR ::= + EXPR EXPR |
-              - EXPR EXPR |
-              * EXPR EXPR |
-              / EXPR EXPR |
-              VARIABLE |
-              DIGIT
-     VARIABLE ::= a | b | c | d | e | f | g | h | i | j | k | x | y | z 
-     DIGIT ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+     STMT      ::= ASSIGN | PRINT
+     ASSIGN    ::= VARIABLE = EXPR
+     PRINT     ::= ! VARIABLE
+     EXPR      ::= + EXPR EXPR |
+                   - EXPR EXPR |
+                   * EXPR EXPR |
+                   / EXPR EXPR |
+                   VARIABLE |
+                   DIGIT
+	 
+	VARIABLE  ::= a | b | c | d | e | f | g | h | i | j | k | x | y | z 
+     DIGIT     ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
      NOTE: tokens are exactly a single character long
 
@@ -82,8 +89,8 @@ static int digit();
 /*************************************************************************/
 /* Definitions for recursive descending parser LL(1)                     */
 /*************************************************************************/
-static int digit()
-{
+//WORKS:
+static int digit(){
 	int reg;
 
 	if (!is_digit(token)) {
@@ -95,9 +102,8 @@ static int digit()
 	next_token();
 	return reg;
 }
-
-static int variable()
-{
+//WORKS:
+static int variable(){
 	int reg;
 
 	if (!is_identifier(token)) {
@@ -109,86 +115,182 @@ static int variable()
 	next_token();
 	return reg;
 }
-
-static int expr()
-{
+//COMPLETE!
+static int expr(){
 	int reg, left_reg, right_reg;
 
 	switch (token) {
+		//+ EXPR EXPR
+		case '+':{
+			next_token();
+			left_reg = expr();
+			right_reg = expr();
+			reg = next_register();
+			CodeGen(ADD, left_reg, right_reg, reg);
+			return reg;
+		}
+		//- EXPR EXPR
+		case '-':{
+			next_token();
+			left_reg = expr();
+			right_reg = expr();
+			reg = next_register();
+			CodeGen(SUB, left_reg, right_reg, reg);
+			return reg;
+		}
+		//* EXPR EXPR
+		case '*':{
+			next_token();
+			left_reg = expr();
+			right_reg = expr();
+			reg = next_register();
+			CodeGen(MUL, left_reg, right_reg, reg);
+			return reg;
+		}
+		// / EXPR EXPR
+		case '/':{
+			next_token();
+			left_reg = expr();
+			right_reg = expr();
+			reg = next_register();
+			CodeGen(DIV, left_reg, right_reg, reg);
+			return reg;
+		}
 
-	case '+':
+		//Variable
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+		case 'g':
+		case 'h':
+		case 'i':
+		case 'j':
+		case 'k':
+		case 'x':
+		case 'y':
+		case 'z':{
+			return variable();
+		}
+
+		//Digit
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':{
+			return digit();
+		}
+
+		default:{
+			ERROR("Symbol %c unknown\n", token);
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+//COMPLETE!
+static void assign(){
+	//ASSIGN    ::= VARIABLE = EXPR
+
+	int left_reg_offset, right_reg;
+	//gets offset
+	left_reg_offset = (token - 'a') * 4;
+
+	//skips equal sign
+	next_token();
+	next_token();
+
+	//parses expr
+	right_reg = expr();
+
+	CodeGen(STOREAI, right_reg, 0, left_reg_offset);
+}
+
+//COMPLETE!
+static void print(){
+	//  PRINT ::= ! VARIABLE
+	CodeGen(OUTPUTAI, 0, 4*(token-'a'), 0);
+
+	next_token();
+	return ;
+
+}
+
+//COMPLETE!
+static void stmt(){
+	//STMT::= ASSIGN | PRINT
+
+	/*
+		by default the first set is either something from assign, print
+		assign ==> first set is all the letters. 
+		print ==> first set is !
+	*/
+	if (token == '!'){
 		next_token();
-		left_reg = expr();
-		right_reg = expr();
-		reg = next_register();
-		CodeGen(ADD, left_reg, right_reg, reg);
-		return reg;
+		print();
+	}
+	else if (is_identifier(token)){
+		assign();
+	}
+	else{
+		ERROR("Symbol %c unknown\n", token);
+		exit(EXIT_FAILURE);
+	}
 
 
-        case 'f':
-                return variable();
+}
 
+//COMPLETE!
+static void morestmts(){
+	////MORESTMTS ::= ; STMTLIST | epsilon
+	switch(token)
+	{
+		case '.':{
+			//goes to program block and ends.
+			return;
+		}
+		case ';':{
+			//skip ; and go to stmtlist
+			next_token();
+			stmtlist();
+			return;
+		}
+		default:{
+			ERROR("Symbol %c unknown\n", token);
+			exit(EXIT_FAILURE);
+		}
+		
+	}
+}
 
-	case '1':
-                return digit();
+//COMPLETE!
+static void stmtlist(){
+	//STMTLIST  ::= STMT MORESTMTS
+	stmt();
+	morestmts();
+}
 
-	case '2':
-                return digit();
-
-	case '3':
-                return digit();
-
-	default:
+//COMPLETE!
+static void program(){
+	// PROGRAM   ::= STMTLIST .
+	stmtlist();
+	if (token != '.'){
 		ERROR("Symbol %c unknown\n", token);
 		exit(EXIT_FAILURE);
 	}
 }
 
-static void assign()
-{
-	/* YOUR CODE GOES HERE */
-}
-
-static void print()
-{
-	/* YOUR CODE GOES HERE */
-}
-
-static void stmt()
-{
-	/* YOUR CODE GOES HERE */
-}
-
-static void morestmts()
-{
-	/* YOUR CODE GOES HERE */
-}
-
-static void stmtlist()
-{
-	/* YOUR CODE GOES HERE */
-}
-
-static void program()
-{
-	/* YOUR CODE GOES HERE */
-
-        /* THIS CODE IS BOGUS */
-        int dummy;
-        /* THIS CODE IS BOGUS */
-	dummy = expr();
-
-	if (token != '.') {
-	  ERROR("Program error.  Current input symbol is %c\n", token);
-	  exit(EXIT_FAILURE);
-	};
-}
-
 /*************************************************************************/
 /* Utility definitions                                                   */
 /*************************************************************************/
-static void CodeGen(OpCode opcode, int field1, int field2, int field3)
-{
+static void CodeGen(OpCode opcode, int field1, int field2, int field3){
 	Instruction instr;
 
 	if (!outfile) {
@@ -202,8 +304,7 @@ static void CodeGen(OpCode opcode, int field1, int field2, int field3)
 	PrintInstruction(outfile, &instr);
 }
 
-static inline void next_token()
-{
+static inline void next_token(){
 	if (*buffer == '\0') {
 		ERROR("End of program input\n");
 		exit(EXIT_FAILURE);
@@ -220,35 +321,30 @@ static inline void next_token()
 		printf(".\n");
 }
 
-static inline int next_register()
-{
+static inline int next_register(){
 	return regnum++;
 }
 
-static inline int is_digit(char c)
-{
+static inline int is_digit(char c){
 	if (c >= '0' && c <= '9')
 		return 1;
 	return 0;
 }
 
-static inline int to_digit(char c)
-{
+static inline int to_digit(char c){
 	if (is_digit(c))
 		return c - '0';
 	WARNING("Non-digit passed to %s, returning zero\n", __func__);
 	return 0;
 }
 
-static inline int is_identifier(char c)
-{
+static inline int is_identifier(char c){
   if ((c >= 'a' && c <= 'k') || ( c >= 'x' && c <= 'z') )
 		return 1;
 	return 0;
 }
 
-static char *read_input(FILE * f)
-{
+static char *read_input(FILE * f){
 	size_t size, i;
 	char *b;
 	int c;
@@ -279,8 +375,7 @@ static char *read_input(FILE * f)
 /* Main function                                                         */
 /*************************************************************************/
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	const char *outfilename = "tinyL.out";
 	char *input;
 	FILE *infile;
